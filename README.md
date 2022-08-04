@@ -7,7 +7,7 @@ This work is licensed under a
 [cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 
-The first half is based on a tutorial (https://physpeach.github.io/cuda-tutorial/) by Shukawa-san, a graduate of the program. 
+The first half of this repository is based on a tutorial (https://physpeach.github.io/cuda-tutorial/) by Shukawa-san, a graduate of the program. 
 The latter half， especially on the molecular dynamics code is my original.
 
 ## Lecture 1 <br>
