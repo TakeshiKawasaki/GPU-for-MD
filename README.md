@@ -8,4 +8,4 @@ This work is licensed under a
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 
 ## Lecture 1 <br>
-Basic operation　of Cuda 
+Basic operation of Cuda 
