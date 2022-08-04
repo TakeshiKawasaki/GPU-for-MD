@@ -1,1 +1,1 @@
-%%How to compile with Cuda
+## How to compile with Cuda <br>
