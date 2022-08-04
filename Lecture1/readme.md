@@ -6,6 +6,6 @@
 ## Contents <br> 
 ### add.cu <br> 
 
-### add.cu <br> 
+### add_vec_serial_cpu.cu <br> 
 
-### add.cu <br> 
+### add_vec_serial_gpu.cu<br> 
