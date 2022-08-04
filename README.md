@@ -11,3 +11,6 @@ This work is licensed under a
 Basic operation of Cuda 
 ## Lecture 2 <br>
 Reduction: for summing up calculations
+
+## Lecture 3 <br>
+Generation of Gaussian random numbers
