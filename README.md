@@ -9,3 +9,5 @@ This work is licensed under a
 
 ## Lecture 1 <br>
 Basic operation of Cuda 
+## Lecture 2 <br>
+Summing up calculations
