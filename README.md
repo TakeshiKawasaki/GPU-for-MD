@@ -11,16 +11,13 @@ This work is licensed under a
 Basic operation of Cuda 
 ## Lecture 2 <br>
 Reduction: for summing up calculations
-
 ## Lecture 3 <br>
 Generation of Gaussian random numbers
-
 ## Lecture 4 <br>
 Langevin dynamics without interactions
-
 ## Lecture 5 <br>
 Langevin dynamics with interactions
-
-
-## Lecture 5 <br>
+## Lecture 6 <br>
 Langevin dynamics with interactions with automatic updateing Verlet list 
+## Lecture 7 <br>
+Langevin dynamics with interactions with automatic updateing Cell list 
