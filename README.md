@@ -11,11 +11,11 @@ The first half of this repository is based on a tutorial (https://physpeach.gith
 The latter half， especially on the molecular dynamics code is my original. Automatic update of the cell list in GPU　is quite essential.
 
 ## Lecture 1 <br>
-Basic operation of Cuda 
+Basic operation of Cuda [1]
 ## Lecture 2 <br>
-Reduction: for summing up calculations
+Reduction: for summing up calculations [1]
 ## Lecture 3 <br>
-Generation of Gaussian random numbers
+Generation of Gaussian random numbers [1]
 ## Lecture 4 <br>
 Langevin dynamics without interactions
 ## Lecture 5 <br>
@@ -26,3 +26,5 @@ Langevin dynamics with interactions with automatic updateing Verlet list
 Langevin dynamics with interactions with automatic updateing Cell list 
 (Automatic update of the list)
 
+## Reference <br>
+[1] https://physpeach.github.io/cuda-tutorial/
