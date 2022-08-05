@@ -10,6 +10,15 @@ This work is licensed under a
 The first half of this repository is based on a tutorial (https://physpeach.github.io/cuda-tutorial/) by Shukawa-san, a graduate of our lab. 
 The latter half， especially on the molecular dynamics code is my original. Automatic update of the cell list in GPU　is quite essential.
 
+## How to compile with Cuda <br>
+ `nvcc add.cu -o add.out` 
+## Execution <br>
+`./add.out` 
+
+## Job submission <br>
+`qsub qsub.sh` 
+
+
 ## Lecture 1 <br>
 Basic operation of Cuda [1]
 ## Lecture 2 <br>
