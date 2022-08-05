@@ -18,6 +18,19 @@ The latter half， especially on the molecular dynamics code is my original. Aut
 ## Job submission <br>
 `qsub qsub.sh` 
 
+```shell:qsub.sh
+#!/bin/sh                                                                                                                 
+
+#$ -S /bin/sh                                                                                                             
+#$ -cwd                                                                                                                   
+#$ -V                                                                                                                     
+#$ -q gpu.q                                                                                                               
+#$ -l gpu=1                                                                                                               
+
+export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
+./add.out
+```
+
 
 ## Lecture 1 <br>
 Basic operation of Cuda [1]
