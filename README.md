@@ -12,7 +12,7 @@ The latter half， especially on the molecular dynamics code is my original. Aut
 
 ## How to retrieve code using Git <br>
  `git clone https://github.com/TakeshiKawasaki/GPU-for-MD` <br>
- For update:
+ For update:<br>
  `git pull` 
  
 ## Compilation with Cuda <br>
