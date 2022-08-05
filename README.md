@@ -23,8 +23,7 @@ Langevin dynamics with interactions
 ## Lecture 6 <br>
 Langevin dynamics with interactions adopting automatic updateing Verlet list 
 ## Lecture 7 <br>
-Langevin dynamics with interactions adopting automatic updateing Cell list 
-(Automatic update of the list)
+Langevin dynamics with interactions adopting automatic updateing Cell list
 
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/
