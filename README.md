@@ -13,7 +13,7 @@ The latter half， especially on the molecular dynamics code is my original. Aut
 ## Lecture 1 <br>
 Basic operation of Cuda [1]
 ## Lecture 2 <br>
-Reduction: for summing up calculations [1]
+Reduction [1]
 ## Lecture 3 <br>
 Generation of Gaussian random numbers [1]
 ## Lecture 4 <br>
