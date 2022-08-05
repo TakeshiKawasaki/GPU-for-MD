@@ -21,9 +21,9 @@ Langevin dynamics without interactions
 ## Lecture 5 <br>
 Langevin dynamics with interactions
 ## Lecture 6 <br>
-Langevin dynamics with interactions with automatic updateing Verlet list 
+Langevin dynamics with interactions adopting automatic updateing Verlet list 
 ## Lecture 7 <br>
-Langevin dynamics with interactions with automatic updateing Cell list 
+Langevin dynamics with interactions adopting automatic updateing Cell list 
 (Automatic update of the list)
 
 ## Reference <br>
