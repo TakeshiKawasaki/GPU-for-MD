@@ -1,3 +1,3 @@
 # Convolution in summation (Reduction) <br>
-## Content <br>
+## Contents <br>
 reduction.cu 
