@@ -54,3 +54,4 @@ Langevin dynamics with interactions adopting automatic updateing Cell list
 
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/
+[2] NVIDIA's instructions:  https://http.download.nvidia.com/developer/cuda/jp/CUDA_Programming_Basics_PartI_jp.pdf
