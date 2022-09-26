@@ -35,7 +35,7 @@ int main(){
   //Launch add_vec()
   double ms;
   measureTime();
-  for(int i = 0; i < 1000; i++){
+  for(int i = 0; i < 100000; i++){
     add_vec(c, a, b);
   }
   ms = measureTime();
