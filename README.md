@@ -11,7 +11,7 @@ The first half of this repository is based on a tutorial (https://physpeach.gith
 The latter half， especially on the molecular dynamics code is my original. Automatic update of the cell list in GPU　is quite essential.
 
 ## Obtaining the codes via Git (available in our clusters) <br>
- `git clone https://github.com/TakeshiKawasaki/GPU-for-MD` <br>
+ `git clone https://github.com/TakeshiKawasaki/GPU-for-MD repo` <br>
  For update:<br>
  `git pull` 
  
