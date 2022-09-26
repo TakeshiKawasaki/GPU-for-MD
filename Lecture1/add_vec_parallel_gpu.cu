@@ -49,7 +49,7 @@ int main(){
   //Launch add_vec() on the device
   double ms;
   measureTime();
-  for(int i = 0; i < 1000; i++){
+  for(int i = 0; i < 100000; i++){
     add_vec<<<NB, NT>>>(c_dev, a_dev, b_dev);
    }
 
