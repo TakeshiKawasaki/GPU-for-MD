@@ -2,6 +2,6 @@
 using namespace std;
 
 int main(){
-  cout<<"hello CUDA"<< endl;
+  cout<<"hello CUDA!!"<< endl;
   return 0;
 }
