@@ -1,6 +1,7 @@
 #include <iostream>
 using namespace std;
 __global__ void myKernel(){
+  //nothing here!!
 }
 
 int main(){
