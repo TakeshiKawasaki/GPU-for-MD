@@ -100,13 +100,14 @@ __global__ void update(double LB,double *x_dev,double *y_dev,double *dx_dev,doub
 }
 
 __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double LB,int *list_dev){
-  double dx,dy,dr,dU,a_i,fx_i,fy_i;
+  double dx,dy,dr,dU,a_i,a_ij;
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   a_i  = a_dev[i_global];
-  fx_i = 0.0;
-  fy_i = 0.0;
+
   
   if(i_global<NP){
+    fx_dev[i_global] = 0.0;
+    fy_dev[i_global] = 0.0;
     for(int j = 1; j<=list_dev[NN*i_global]; j++){
       dx=x_dev[list_dev[NN*i_global+j]]-x_dev[i_global];
       dy=y_dev[list_dev[NN*i_global+j]]-y_dev[i_global];
@@ -114,18 +115,13 @@ __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,doubl
       dx -= LB*floor(dx/LB+0.5);
       dy -= LB*floor(dy/LB+0.5);	
       dr = sqrt(dx*dx+dy*dy);
-      
-      if(dr < 0.5*(a_i+a_dev[list_dev[NN*i_global+j]]))
-	dU = -(1-dr/a_i)/a_i; //derivertive of U wrt r.
-      
-      else
-	dU=0.0;  
-      fx_i += dU*dx/dr;
-      fy_i += dU*dy/dr;
+      a_ij=0.5*(a_i+a_dev[list_dev[NN*i_global+j]]);
+      if(dr < a_ij){
+	      dU = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
+         fx_dev[i_global] += dU*dx/dr;
+         fy_dev[i_global] += dU*dy/dr;
+      }     
     }
-    
-    fx_dev[i_global] = fx_i;
-    fy_dev[i_global] = fy_i;
     // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
   }
 }
