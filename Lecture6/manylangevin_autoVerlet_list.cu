@@ -7,12 +7,12 @@
 #include <fstream>
 #include <curand.h>
 #include <curand_kernel.h>
-#include "MT.h"
+#include "../MT.h"
 using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 1e+5; //Particle number.
+const int  NP = 1e+4; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 100;
 const double dt = 0.01;
@@ -20,7 +20,7 @@ const int timemax = 1e+2;
 //Langevin parameters
 const double zeta = 1.0;
 const double temp = 1.e-4;
-const double rho = 0.95;
+const double rho = 0.85;
 const double RCHK= 2.0;
 const double rcut= 1.0;
 
@@ -161,7 +161,7 @@ void output(double *x,double *y,double *vx,double *vy,double *a){
   
   for(int i=0;i<NP;i++){
     file << x[i] << " " << y[i]<< " " << a[i] << endl;
-    temp0+= (vx[i]*vx[i]);
+    temp0+= 0.5*(vx[i]*vx[i]+vy[i]*vy[i]);
     //  cout <<vx[i]<<endl;
   }
   file.close();
