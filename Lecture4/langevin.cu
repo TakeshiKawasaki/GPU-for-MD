@@ -6,7 +6,7 @@
 #include <iostream>
 #include <curand.h>
 #include <curand_kernel.h>
-#include "MT.h"
+#include "../MT.h"
 using namespace std;
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
@@ -69,10 +69,13 @@ int main(){
   cudaMemcpy(v, v_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
   //  double v_s= sum(v);
   double diffusion=0.0;
-  for(int i=0;i<NP;i++)
+  double kine=0.0;
+  for(int i=0;i<NP;i++){
     diffusion += 0.5*x[i]*x[i]/timemax/NP;
+    kine+=v[i]*v[i]/NP;
+    }
     
-  cout <<diffusion<<endl;
+  cout <<diffusion<<" "<<kine<<endl;
 
   //  cout << sec <<"sec"<<endl;  
   cudaFree(x_dev);
