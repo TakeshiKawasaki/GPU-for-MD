@@ -51,6 +51,10 @@ Langevin dynamics with interactions adopting automatic updating Verlet list
 ## Lecture 7 <br>
 Langevin dynamics with interactions adopting automatic updating Cell list
 
+## Lecture 8 <br>
+Molecular dynamics with interactions adopting automatic updating Cell list
+
+
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/ <br>
 [2] NVIDIA's instructions:  https://http.download.nvidia.com/developer/cuda/jp/CUDA_Programming_Basics_PartI_jp.pdf <br>
