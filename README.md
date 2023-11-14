@@ -49,10 +49,10 @@ Langevin dynamics with interactions
 ## Lecture 6 <br>
 Langevin dynamics with interactions adopting automatic updating Verlet list 
 ## Lecture 7 <br>
-Langevin dynamics with interactions adopting automatic updating Cell list
+Langevin dynamics with interactions adopting automatic updating cell list
 
 ## Lecture 8 <br>
-Molecular dynamics with interactions adopting automatic updating Cell list
+Molecular dynamics (MD) with interactions adopting automatic updating cell list
 
 
 ## Reference <br>
