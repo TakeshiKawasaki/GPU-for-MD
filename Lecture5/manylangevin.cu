@@ -23,7 +23,7 @@ const double rho = 0.85;
 //const double LB = 100.;
 
 
-//Initiallization of "curandState"
+//Initialization of "curandState"
 __global__ void setCurand(unsigned long long seed, curandState *state){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   curand_init(seed, i_global, 0, &state[i_global]);
