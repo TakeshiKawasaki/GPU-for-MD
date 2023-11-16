@@ -29,11 +29,6 @@ __global__ void setCurand(unsigned long long seed, curandState *state){
   curand_init(seed, i_global, 0, &state[i_global]);
 }
 
-//Gaussian random number's generation
-__global__ void genrand_kernel(float *result, curandState *state){
-  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-  result[i_global] = curand_normal(&state[i_global]);
-}
 
 //Gaussian random number's generation
 __global__ void langevin_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,curandState *state, double noise_intensity,double LB){
@@ -54,10 +49,10 @@ __global__ void langevin_kernel(double*x_dev,double*y_dev,double *vx_dev,double 
 
 //Force calculation NP*NP matrix...
 __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double LB){
-  double dx,dy,dr,dU,a_i;
+  double dx,dy,dr,dU,a_ij;
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
 
-  a_i  = a_dev[i_global];
+
 
   if(i_global<NP){
   fx_dev[i_global]=0.0;
@@ -71,15 +66,15 @@ __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,doubl
 	dy -= LB*floor(dy/LB+0.5);
 
 	dr = sqrt(dx*dx+dy*dy);
+	a_ij=0.5*(a_dev[i_global]+a_dev[j]);
 
-	if(dr < 0.5*(a_i+a_dev[j])){
-	  dU = -(1-dr/a_i)/a_i; //derivertive of U wrt r.
-
-	fx_dev[i_global] += dU*dx/dr;
-	fy_dev[i_global] += dU*dy/dr;
-   }
-  }
-    // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
+	if(dr < a_ij){
+	  dU = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
+	  fx_dev[i_global] += dU*dx/dr;
+	  fy_dev[i_global] += dU*dy/dr;
+	}
+      }
+  // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
   }
 }
 
@@ -157,7 +152,7 @@ int main(){
   for(double t=0;t<timemax;t+=dt){
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB);
     langevin_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,state,noise_intensity,LB);
-     cudaDeviceSynchronize(); // for printf in the device.
+    //     cudaDeviceSynchronize(); // for printf in the device.
   }
   cudaMemcpy(x,   x_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(vx, vx_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
