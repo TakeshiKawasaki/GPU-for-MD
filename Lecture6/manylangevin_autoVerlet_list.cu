@@ -96,6 +96,8 @@ __global__ void update(double LB,double *x_dev,double *y_dev,double *dx_dev,doub
     //  printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
+    if(i_global==0)
+      gate_dev[0] = 0;
   }
 }
 
@@ -203,16 +205,16 @@ int main(){
   ini_gate_kernel<<<1,1>>>(gate_dev,1);
   update<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,gate_dev);
   measureTime();
+
   for(double t=0;t<timemax;t+=dt){
     // cout<<t<<endl;
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB,list_dev);
     langevin_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,state,noise_intensity,LB);
-    ini_gate_kernel<<<1,1>>>(gate_dev,0);
-     disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev);
+    // ini_gate_kernel<<<1,1>>>(gate_dev,0);
+    disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev);
     // cudaDeviceSynchronize(); // for printf in the device.
     update<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,gate_dev);
     // cudaDeviceSynchronize();
-   
     // cout <<t<<endl;
   } 
   sec = measureTime()/1000.;
