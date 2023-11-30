@@ -7,12 +7,12 @@
 #include <fstream>
 #include <curand.h>
 #include <curand_kernel.h>
-#include "MT.h"
+#include "../MT.h"
 using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 1e+5; //Particle number.
+const int  NP = 1e+4; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 100;
 const int  NPC = 1000; // Number of the particles in the neighbour cell 
@@ -21,8 +21,8 @@ const int timemax = 1e+2;
 //Langevin parameters
 const double zeta = 1.0;
 const double temp = 1.e-4;
-const double rho = 0.95;
-const double RCHK= 1.5;
+const double rho = 0.85;
+const double RCHK= 2.0;
 const double rcut= 1.0;
 
 
@@ -94,6 +94,8 @@ __global__ void update(double LB,double *x_dev,double *y_dev,double *dx_dev,doub
     //    printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
+    if(i_global ==0)
+      gate_dev[0]=0;
   }
 }
 
@@ -114,7 +116,7 @@ __global__ void cell_map(double LB,double *x_dev,double *y_dev,int *map_dev,int 
   
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   int nx,ny;
-   int num;
+  int num;
   
   if(gate_dev[0] == 1 && i_global<NP){
     
@@ -177,18 +179,19 @@ __global__ void cell_list(double LB,double *x_dev,double *y_dev,double *dx_dev,d
     //    printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
+    if(i_global==0)
+      gate_dev[0]=0;
   } 
 }
 
 
 __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double LB,int *list_dev){
-  double dx,dy,dr,dU,a_i,fx_i,fy_i;
+  double dx,dy,dr,dU,a_ij;
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-  a_i  = a_dev[i_global];
-  fx_i = 0.0;
-  fy_i = 0.0;
-  
+   
   if(i_global<NP){
+    fx_dev[i_global] = 0.;
+    fy_dev[i_global] = 0.;
     for(int j = 1; j<=list_dev[NN*i_global]; j++){
       dx=x_dev[list_dev[NN*i_global+j]]-x_dev[i_global];
       dy=y_dev[list_dev[NN*i_global+j]]-y_dev[i_global];
@@ -196,17 +199,14 @@ __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,doubl
       dx -= LB*floor(dx/LB+0.5);
       dy -= LB*floor(dy/LB+0.5);	
       dr = sqrt(dx*dx+dy*dy);
-      
-      if(dr < 0.5*(a_i+a_dev[list_dev[NN*i_global+j]]))
-	dU = -(1-dr/a_i)/a_i; //derivertive of U wrt r.
-      
-      else
-	dU=0.0;  
-      fx_i += dU*dx/dr;
-      fy_i += dU*dy/dr;
+      a_ij = 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
+      if(dr < a_ij){
+	dU = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
+	fx_dev[i_global] += dU*dx/dr;
+	fy_dev[i_global] += dU*dy/dr;
+      }      
     }
-    fx_dev[i_global] = fx_i;
-    fy_dev[i_global] = fy_i;
+
     // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
   }
 }
@@ -250,7 +250,7 @@ void output(double *x,double *y,double *vx,double *vy,double *a){
   
   for(int i=0;i<NP;i++){
     file << x[i] << " " << y[i]<< " " << a[i] << endl;
-    temp0+= (vx[i]*vx[i]);
+    temp0+= 0.5*(vx[i]*vx[i]+vy[i]*vy[i]);
     // cout <<i<<" "<<map[i]<<endl;
   }
 
@@ -312,7 +312,7 @@ int main(){
     // cout<<t<<endl;
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB,list_dev);
     langevin_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,state,noise_intensity,LB);
-    init_gate_kernel<<<1,1>>>(gate_dev,0);
+    //init_gate_kernel<<<1,1>>>(gate_dev,0);
     disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev);
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
     // cudaDeviceSynchronize(); // for printf in the device.
@@ -322,7 +322,6 @@ int main(){
   sec = measureTime()/1000.;
   cout<<"time(sec):"<<sec<<endl;
  
-
   cudaMemcpy(x,   x_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(vx, vx_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(y,   y_dev, NB * NT* sizeof(double),cudaMemcpyDeviceToHost);
