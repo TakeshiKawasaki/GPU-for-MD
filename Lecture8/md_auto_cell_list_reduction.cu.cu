@@ -280,21 +280,21 @@ __global__ void init_array_rand(double *x_dev, double c,curandState *state){
 
 __global__ void add_reduction(double *pot_dev, int *reduce_dev, int *remain_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-  if(i_global< reduce_dev[0])
-    pot_dev[i_global] += pot_dev[i_global+remain_dev[0]];
+  if(i_global< *reduce_dev)
+    pot_dev[i_global] += pot_dev[i_global+*remain_dev];
 }
 __global__ void len_ini(int *reduce_dev,int *remain_dev, int size){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global==0){
-    reduce_dev[0]= size/2;
-    remain_dev[0]= size - reduce_dev[0]; 
+    *reduce_dev= size/2;
+    *remain_dev= size - *reduce_dev; 
   }
 }
 __global__ void len_div(int *reduce_dev,int *remain_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global==0){
-    reduce_dev[0] = remain_dev[0]/2;
-    remain_dev[0] -= reduce_dev[0];
+    *reduce_dev = *remain_dev/2;
+    *remain_dev -= *reduce_dev;
   }
 }
 
