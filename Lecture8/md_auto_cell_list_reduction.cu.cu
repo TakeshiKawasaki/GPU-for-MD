@@ -283,11 +283,11 @@ __global__ void add_reduction(double *pot_dev, int *reduce_dev, int *remain_dev)
   if(i_global< reduce_dev[0])
     pot_dev[i_global] += pot_dev[i_global+remain_dev[0]];
 }
-__global__ void len_ini(int *reduce_dev,int *remain_dev){
+__global__ void len_ini(int *reduce_dev,int *remain_dev, int size){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global==0){
-    reduce_dev[0]= NP/2;
-    remain_dev[0]= NP - reduce_dev[0]; 
+    reduce_dev[0]= size/2;
+    remain_dev[0]= size - reduce_dev[0]; 
   }
 }
 __global__ void len_div(int *reduce_dev,int *remain_dev){
@@ -393,13 +393,12 @@ int main(){
     
     if(((int)(t/dt_md))%1000000 == 0){
       calc_energy_kernel<<<NB,NT>>>(x_dev,y_dev,pot_dev,a_dev,LB,list_dev);
+      len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);     
       int reduce=NP/2,remain=NP-NP/2;
-      len_ini<<<1,1>>>(reduce_dev,remain_dev);     
-      while(remain>1){
+      while(reduce>0){
 	      add_reduction<<<(reduce+NT-1)/NT,NT>>>(pot_dev,reduce_dev,remain_dev);
-	      cudaMemcpy(&reduce,reduce_dev,sizeof(int),cudaMemcpyDeviceToHost);
-        cudaMemcpy(&remain,remain_dev,sizeof(int),cudaMemcpyDeviceToHost);
-        cout<<"reduce=" << reduce <<" remain="<<remain << endl; 
+//      cout<<"reduce=" << reduce <<" remain="<< remain << endl; 
+        reduce = remain/2;remain-=reduce;
         len_div<<<1,1>>>(reduce_dev,remain_dev);
       }
       cudaMemcpy(pot,pot_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
@@ -412,7 +411,6 @@ int main(){
   sec = measureTime()/1000.;
   cout<<"time(sec):"<<sec<<endl;
 
-  
   cudaFree(x_dev);
   cudaFree(vx_dev);
   cudaFree(y_dev);
