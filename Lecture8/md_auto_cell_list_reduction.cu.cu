@@ -396,8 +396,7 @@ int main(){
       len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);     
       int reduce=NP/2,remain=NP-NP/2;
       while(reduce>0){
-	      add_reduction<<<(reduce+NT-1)/NT,NT>>>(pot_dev,reduce_dev,remain_dev);
-//      cout<<"reduce=" << reduce <<" remain="<< remain << endl; 
+        add_reduction<<<(reduce+NT-1)/NT,NT>>>(pot_dev,reduce_dev,remain_dev);
         reduce = remain/2;remain-=reduce;
         len_div<<<1,1>>>(reduce_dev,remain_dev);
       }
