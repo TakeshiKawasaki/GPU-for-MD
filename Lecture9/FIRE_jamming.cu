@@ -42,6 +42,38 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
   }
 }
 
+__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, doulbe *power_dev,double *alpha_dev){
+  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
+  double f,v;
+  if(i_global<NP){
+    f = sqrt(fx_dev[i_global]*fx_dev[i_global]+fy_dev[i_global]*fy_dev[i_global]+DBL_EPSILON);
+    v = sqrt(vx_dec[i_global]*vx_dec[i_global]+vy_dec[i_global]*vy_dec[i_global]);
+    vx_dev[i_global] = (1.-alpha[0])*vx_dev[i_global]+alpha[0]*v*fx_dev[i_global]/f;
+    power[i_global] = vx[i_global]*fx[i_global]+vy[i_global]*fy[i_global];
+  }
+}
+
+__global__ void FIRE_reset_dev(double *vx_dev, double *vy_dev,double *power_dev,double *alpha_dev,double *dt_dev){
+  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
+  
+  if(i_global<NP){
+    if(power_dev[0] > 0){
+      vx_dev[i_global] = 0.0; vy_dev[i_global] = 0.0;
+      if(i_global = 0){
+	alpha_dev[0] = 1.0;
+	dt_dev[0] = dt0;
+      }
+    }
+    else{ //this should be changed into 5 times criterion
+      if(i_global = 0){
+	alpha_dev[0] *= 0.99;
+	dt_dev[0] *= 1.01;
+      }
+    }
+  }
+}
+
+
 __global__ void disp_gate_kernel(double LB,double *vx_dev,double *vy_dev,double *dx_dev,double *dy_dev,int *gate_dev,double dt)
 {
   double r2;  
@@ -235,36 +267,7 @@ __global__ void len_div(int *reduce_dev,int *remain_dev){
   }
 }
 
-__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, doulbe *power_dev,double *alpha_dev){
-  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-  double f,v;
-  if(i_global<NP){
-    f = sqrt(fx_dev[i_global]*fx_dev[i_global]+fy_dev[i_global]*fy_dev[i_global]+DBL_EPSILON);
-    v = sqrt(vx_dec[i_global]*vx_dec[i_global]+vy_dec[i_global]*vy_dec[i_global]);
-    vx_dev[i_global] = (1.-alpha[0])*vx_dev[i_global]+alpha[0]*v*fx_dev[i_global]/f;
-    power[i_global] = vx[i_global]*fx[i_global]+vy[i_global]*fy[i_global];
-  }
-}
 
-__global__ void FIRE_reset_dev(double *vx_dev, double *vy_dev,double *power_dev,double *alpha_dev,double *dt_dev){
-  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-  
-  if(i_global<NP){
-    if(power_dev[0] > 0){
-      vx_dev[i_global] = 0.0; vy_dev[i_global] = 0.0;
-      if(i_global = 0){
-	alpha_dev[0] = 1.0;
-	dt_dev[0] = dt0;
-      }
-    }
-    else{ //this should be changed into 5 times criterion
-      if(i_global = 0){
-	alpha_dev[0] *= 0.99;
-	dt_dev[0] *= 1.01;
-      }
-    }
-  }
-}
 
 int main(){
   double *x,*vx,*y,*vy,*a,*power,*x_dev,*vx_dev,*y_dev,*dx_dev,*dy_dev,*vy_dev,*a_dev,*fx_dev,*fy_dev,*power_dev;
