@@ -28,7 +28,7 @@ __global__ void setCurand(unsigned long long seed, curandState *state){
 }
 
 
-__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double LB,double *power_dev,double *dt_dev){
+__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double LB,double *dt_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
 
   if(i_global<NP){
@@ -38,11 +38,10 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     y_dev[i_global] += vy_dev[i_global]*dt_dev[0];
     x_dev[i_global]  -= LB*floor(x_dev[i_global]/LB);
     y_dev[i_global]  -= LB*floor(y_dev[i_global]/LB);
-    power_dev[i_global] = x[i_global]*vx[i_global]+y[i_global]*vy[i_global];
   }
 }
 
-__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, doulbe *power_dev,double *alpha_dev){
+__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   double f,v;
   if(i_global<NP){
@@ -64,7 +63,7 @@ __global__ void FIRE_reset_dev(double *vx_dev, double *vy_dev,double *power_dev,
 	dt_dev[0] = dt0;
       }
     }
-    else{ //this should be changed into 5 times criterion
+    else{ //this should be changed into five times criterion
       if(i_global = 0){
 	alpha_dev[0] *= 0.99;
 	dt_dev[0] *= 1.01;
@@ -228,6 +227,11 @@ __global__ void init_gate_kernel(int *gate_dev, int c){
   gate_dev[0]=c;
 }
 
+__global__ void init_scalar_kernel(int *a_dev, double d){
+  a_dev[0]=d;
+}
+
+
 __global__ void init_map_kernel(int *map_dev,int M){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   // for(int i=0;i<M;i++)
@@ -266,8 +270,6 @@ __global__ void len_div(int *reduce_dev,int *remain_dev){
     *remain_dev -= *reduce_dev;
   }
 }
-
-
 
 int main(){
   double *x,*vx,*y,*vy,*a,*power,*x_dev,*vx_dev,*y_dev,*dx_dev,*dy_dev,*vy_dev,*a_dev,*fx_dev,*fy_dev,*power_dev;
@@ -308,7 +310,7 @@ int main(){
   init_array<<<NB,NT>>>(vy_dev,0.);
   init_array<<<NB,NT>>>(pot_dev,0.);
   init_gate_kernel<<<1,1>>>(gate_dev,1);
-  init_gate_kernel<<<1,1>>>(dt_dev,dt0);
+  init_scalar_kernel<<<1,1>>>(dt_dev,dt0);
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
   cell_map<<<NB,NT>>>(LB,x_dev,y_dev,map_dev,gate_dev,M);
   cell_list<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
@@ -317,14 +319,16 @@ int main(){
   for(;;){
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB,list_dev);
     init_array<<<NB,NT>>>(power_dev,0.);
-    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,LB,power_dev,dt_dev);
-    len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);     
+    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,LB,dt_dev);
+    FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev);
+    len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
     int reduce=NP/2,remain=NP-NP/2;
     while(reduce>0){
       add_reduction<<<(reduce+NT-1)/NT,NT>>>(power_dev,reduce_dev,remain_dev);
       reduce = remain/2;remain-=reduce;
       len_div<<<1,1>>>(reduce_dev,remain_dev);
     }
+    FIRE_reset_dev<<<NB,NT>>>(vx_dev,vy_dev,power_dev,alpha_dev,dt_dev);
     init_gate_kernel<<<1,1>>>(gate_dev,0);
     disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_bd);
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
