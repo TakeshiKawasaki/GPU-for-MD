@@ -21,7 +21,7 @@ const double RCHK= 2.0;
 const double rcut= 1.0;
 
 
-//Initiallization of "curandState"
+//Initialization of "curandState"
 __global__ void setCurand(unsigned long long seed, curandState *state){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   curand_init(seed, i_global, 0, &state[i_global]);
@@ -308,6 +308,7 @@ int main(){
   init_array<<<NB,NT>>>(vy_dev,0.);
   init_array<<<NB,NT>>>(pot_dev,0.);
   init_gate_kernel<<<1,1>>>(gate_dev,1);
+  init_gate_kernel<<<1,1>>>(dt_dev,dt0);
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
   cell_map<<<NB,NT>>>(LB,x_dev,y_dev,map_dev,gate_dev,M);
   cell_list<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
@@ -316,7 +317,7 @@ int main(){
   for(;;){
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB,list_dev);
     init_array<<<NB,NT>>>(power_dev,0.);
-    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,LB,power_dev);
+    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,LB,power_dev,dt_dev);
     len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);     
     int reduce=NP/2,remain=NP-NP/2;
     while(reduce>0){
