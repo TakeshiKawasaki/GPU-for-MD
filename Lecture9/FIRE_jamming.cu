@@ -19,7 +19,7 @@ const int  NPC = 1000; // Number of the particles in the neighbour cell
 const double dt0 = 0.01;
 const double RCHK= 2.0;
 const double rcut= 1.0;
-const double rho = 0.82;
+const double phi = 0.82;
 
 //Initialization of "curandState"
 __global__ void setCurand(unsigned long long seed, curandState *state){
@@ -40,7 +40,7 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
   }
 }
 
-__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev){
+__global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev,int *FIRE_gate_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   double f,v;
   if(i_global<NP){
@@ -48,6 +48,8 @@ __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, do
     v = sqrt(vx_dec[i_global]*vx_dec[i_global]+vy_dec[i_global]*vy_dec[i_global]);
     vx_dev[i_global] = (1.-alpha[0])*vx_dev[i_global]+alpha[0]*v*fx_dev[i_global]/f;
     power[i_global] = vx[i_global]*fx[i_global]+vy[i_global]*fy[i_global];
+    if(f < 1.e-12)
+      FIRE_gate_dev[0]=1;
   }
 }
 
@@ -250,6 +252,18 @@ __global__ void init_array_rand(double *x_dev, double c,curandState *state){
   x_dev[i_global] = c*curand_uniform(&state[i_global]);
 }
 
+__global__ void volume_affine(double *x_dev, double *y_dev,double *phi_dev,double *deltaphi_dev,double *L_dev){
+  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
+  if(i_global<NP){
+    x_dev[i_global] = x_dev[i_global]*sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));
+    y_dev[i_global] = y_dev[i_global]*sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));
+  }
+  if(i_global==0){
+    *phi_dev += *deltaphi_dev;
+    *L_dev   *= sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));
+  }
+}
+
 __global__ void add_reduction(double *pot_dev, int *reduce_dev, int *remain_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global< *reduce_dev)
@@ -273,11 +287,13 @@ __global__ void len_div(int *reduce_dev,int *remain_dev){
 
 int main(){
   double *x,*vx,*y,*vy,*a,*power,*x_dev,*vx_dev,*y_dev,*dx_dev,*dy_dev,*vy_dev,*a_dev,*fx_dev,*fy_dev,*power_dev,*L_dev;
-  double *dt_dev,*alpha_dev,*L_dev;
+  double *dt_dev,*alpha_dev,*L_dev,*phi_dev;
   int *list_dev,*map_dev,*gate_dev,*remain_dev,*reduce_dev;
+  int *FIRE_gate_dev,FIRE_gate;
+  int clock=0;
   curandState *state; //Cuda state for random numbers
   double sec; //measurred time
-  double L = sqrt(M_PI*1.0*1.0*(double)NP*0.25/rho);
+  double L = sqrt(M_PI*1.0*1.0*(double)NP*0.25/phi);
   int M = (int)(LB/RCHK);
   cout <<M<<endl;
 
@@ -300,14 +316,18 @@ int main(){
   cudaMalloc((void**)&dt_dev, sizeof(double)); 
   cudaMalloc((void**)&alpha_dev, sizeof(double));
   cudaMalloc((void**)&L_dev, sizeof(double)); 
-  cudaMalloc((void**)&gate_dev, sizeof(int)); 
+  cudaMalloc((void**)&phi_dev, sizeof(double)); 
+  cudaMalloc((void**)&gate_dev, sizeof(int));
+  cudaMalloc((void**)&FIRE_gate_dev, sizeof(int)); 
   cudaMalloc((void**)&remain_dev, sizeof(int));
   cudaMalloc((void**)&reduce_dev, sizeof(int));
   cudaMalloc((void**)&list_dev,  NB * NT * NN* sizeof(int)); 
   cudaMalloc((void**)&map_dev,  M * M * NPC* sizeof(int)); 
   cudaMalloc((void**)&state,  NB * NT * sizeof(curandState)); 
   cudaMemcpy(L_dev, L,sizeof(double),cudaMemcpyHostToDevice);
+  cudaMemcpy(phi_dev, phi,sizeof(double),cudaMemcpyHostToDevice);
   setCurand<<<NB,NT>>>(0, state); // Construction of the cudarand state.  
+ 
   init_array_rand<<<NB,NT>>>(x_dev,LB,state);
   init_array_rand<<<NB,NT>>>(y_dev,LB,state);
   init_diamters<<<NB,NT>>>(a_dev);
@@ -315,17 +335,18 @@ int main(){
   init_array<<<NB,NT>>>(vy_dev,0.);
   init_array<<<NB,NT>>>(pot_dev,0.);
   init_gate_kernel<<<1,1>>>(gate_dev,1);
+  init_gate_kernel<<<1,1>>>(FIRE_gate_dev,0);
   init_scalar_kernel<<<1,1>>>(dt_dev,dt0);
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
   cell_map<<<NB,NT>>>(LB,x_dev,y_dev,map_dev,gate_dev,M);
   cell_list<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
  
- measureTime();  
+  measureTime();  
   for(;;){
+    clock++;
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev);
-    init_array<<<NB,NT>>>(power_dev,0.);
     eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,dt_dev);
-    FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev);
+    FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev,FIRE_gate_dev);
     len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
     int reduce=NP/2,remain=NP-NP/2;
     while(reduce>0){
@@ -339,6 +360,15 @@ int main(){
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
     cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
     cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
+  //////////////////////////
+    if(clock%(1e4)==0){
+      cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
+      if(FIRE_gate==1){
+        cout<<"count="<< clock <<endl;
+        break;
+      }
+    }
+  //////////////////////////
   }
 
   sec = measureTime()/1000.;
