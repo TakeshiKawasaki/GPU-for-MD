@@ -237,6 +237,14 @@ __global__ void init_array(double *x_dev, double c){
   x_dev[i_global] = c;
 }
 
+__global__ void init_diamters(double *a_dev){
+  int i_global = threadIdx.x + blockIdx.x*blockDim.x;
+  if(i_global<NP/2)
+    a_dev[i_global] = 1.0;
+  if(i_global>NP/2 && i_global<NP)
+    a_dev[i_global] = 1.4;
+}
+
 __global__ void init_array_rand(double *x_dev, double c,curandState *state){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   x_dev[i_global] = c*curand_uniform(&state[i_global]);
@@ -302,7 +310,7 @@ int main(){
   setCurand<<<NB,NT>>>(0, state); // Construction of the cudarand state.  
   init_array_rand<<<NB,NT>>>(x_dev,LB,state);
   init_array_rand<<<NB,NT>>>(y_dev,LB,state);
-  init_array<<<NB,NT>>>(a_dev,1.0);
+  init_diamters<<<NB,NT>>>(a_dev);
   init_array<<<NB,NT>>>(vx_dev,0.);
   init_array<<<NB,NT>>>(vy_dev,0.);
   init_array<<<NB,NT>>>(pot_dev,0.);
