@@ -361,12 +361,10 @@ int main(){
     cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
     cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
   //////////////////////////
-    if(clock%(1e4)==0){
-      cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
-      if(FIRE_gate==1){
-        cout<<"count="<< clock <<endl;
+    cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
+    if(FIRE_gate == 1){
+      cout<<"count="<< clock <<endl;
         break;
-      }
     }
   //////////////////////////
   }
