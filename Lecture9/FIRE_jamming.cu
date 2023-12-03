@@ -35,8 +35,8 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     vy_dev[i_global] +=  fy_dev[i_global]*dt_dev[0];
     x_dev[i_global]  +=  vx_dev[i_global]*dt_dev[0];
     y_dev[i_global]  +=  vy_dev[i_global]*dt_dev[0];
-    x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/LB);
-    y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/LB);
+    x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/(*L_dev));
+    y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
   }
 }
 
@@ -101,8 +101,8 @@ __global__ void update(double *L_dev,double *x_dev,double *y_dev,double *dx_dev,
       if(j != i_global){
       	dx = x_dev[i_global] - x_dev[j];
 	      dy = y_dev[i_global] - y_dev[j];
-	      dx -= (*L_dev)*floor(dx/LB+0.5);
-	      dy -= (*L_dev)*floor(dy/LB+0.5);	  
+	      dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
+	      dy -= (*L_dev)*floor(dy/(*L_dev)+0.5);	  
 	      r2 = dx*dx + dy*dy;
 	      if(r2 < RCHK*RCHK){
 	        list_dev[NN*i_global]++;
@@ -125,14 +125,14 @@ __device__ int f(int i,int M){
   return k;
 }
 
-__global__ void cell_map(double LB,double *x_dev,double *y_dev,int *map_dev,int *gate_dev, int M)
+__global__ void cell_map(double *L_dev,double *x_dev,double *y_dev,int *map_dev,int *gate_dev, int M)
 {  
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   int nx,ny;
   int num;
   if(gate_dev[0] == 1 && i_global<NP){
-    nx = f((int)(x_dev[i_global]*(double)M/(double)LB),M);
-    ny = f((int)(y_dev[i_global]*(double)M/(double)LB),M);
+    nx = f((int)(x_dev[i_global]*(double)M/(double)(*L_dev)),M);
+    ny = f((int)(y_dev[i_global]*(double)M/(double)(*L_dev)),M);
     num = atomicAdd(&map_dev[(nx+M*ny)*NPC],1);
     map_dev[(nx+M*ny)*NPC+num+1] = i_global;
   }
@@ -147,8 +147,8 @@ __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_d
   int l,m;
   if(gate_dev[0] == 1 && i_global<NP){
     list_dev[NN*i_global]=0;
-    nx=f((int)(x_dev[i_global]*(double)M/(double)LB),M);
-    ny=f((int)(y_dev[i_global]*(double)M/(double)LB),M);
+    nx=f((int)(x_dev[i_global]*(double)M/(double)(*L_dev)),M);
+    ny=f((int)(y_dev[i_global]*(double)M/(double)(*L_dev)),M);
     for(m=ny-1;m<=ny+1;m++)
       for(l=nx-1;l<=nx+1;l++){
 	        for(k=1; k<=map_dev[(f(l,M)+M*f(m,M))*NPC]; k++){
@@ -205,8 +205,8 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pot_dev,dou
     for(int j = 1; j<=list_dev[NN*i_global]; j++){
       dx=x_dev[list_dev[NN*i_global+j]]-x_dev[i_global];
       dy=y_dev[list_dev[NN*i_global+j]]-y_dev[i_global];
-      dx -= LB*floor(dx/(*L_dev)+0.5);
-      dy -= LB*floor(dy/(*L_dev)_dev+0.5);
+      dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
+      dy -= (*L_dev)*floor(dy/(*L_dev)_dev+0.5);
       dr = sqrt(dx*dx+dy*dy);
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij)
@@ -294,7 +294,7 @@ int main(){
   curandState *state; //Cuda state for random numbers
   double sec; //measurred time
   double L = sqrt(M_PI*1.0*1.0*(double)NP*0.25/phi);
-  int M = (int)(LB/RCHK);
+  int M = (int)(L/RCHK);
   cout <<M<<endl;
 
   x  = (double*)malloc(NB*NT*sizeof(double));
@@ -328,8 +328,8 @@ int main(){
   cudaMemcpy(phi_dev, phi,sizeof(double),cudaMemcpyHostToDevice);
   setCurand<<<NB,NT>>>(0, state); // Construction of the cudarand state.  
  
-  init_array_rand<<<NB,NT>>>(x_dev,LB,state);
-  init_array_rand<<<NB,NT>>>(y_dev,LB,state);
+  init_array_rand<<<NB,NT>>>(x_dev,L_dev,state);
+  init_array_rand<<<NB,NT>>>(y_dev,L_dev,state);
   init_diamters<<<NB,NT>>>(a_dev);
   init_array<<<NB,NT>>>(vx_dev,0.);
   init_array<<<NB,NT>>>(vy_dev,0.);
@@ -338,8 +338,8 @@ int main(){
   init_gate_kernel<<<1,1>>>(FIRE_gate_dev,0);
   init_scalar_kernel<<<1,1>>>(dt_dev,dt0);
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
-  cell_map<<<NB,NT>>>(LB,x_dev,y_dev,map_dev,gate_dev,M);
-  cell_list<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
+  cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
+  cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
  
   measureTime();  
   for(;;){
