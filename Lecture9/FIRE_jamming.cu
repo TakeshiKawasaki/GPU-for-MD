@@ -27,7 +27,7 @@ __global__ void setCurand(unsigned long long seed, curandState *state){
   curand_init(seed, i_global, 0, &state[i_global]);
 }
 
-__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *dt_dev){
+__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *dt_dev, int *FIRE_gate){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
 
   if(i_global<NP){
@@ -38,6 +38,8 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/(*L_dev));
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
   }
+if(i_global==0)
+  FIRE_gate_dev[0] =1;
 }
 
 __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev,int *FIRE_gate_dev){
@@ -48,8 +50,8 @@ __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, do
     v = sqrt(vx_dec[i_global]*vx_dec[i_global]+vy_dec[i_global]*vy_dec[i_global]);
     vx_dev[i_global] = (1.-alpha[0])*vx_dev[i_global]+alpha[0]*v*fx_dev[i_global]/f;
     power[i_global] = vx[i_global]*fx[i_global]+vy[i_global]*fy[i_global];
-    if(f < 1.e-12)
-      FIRE_gate_dev[0]=1;
+    if(f > 1.e-12)
+      FIRE_gate_dev[0]=0;
   }
 }
 
