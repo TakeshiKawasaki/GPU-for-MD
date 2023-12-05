@@ -27,7 +27,7 @@ __global__ void setCurand(unsigned long long seed, curandState *state){
   curand_init(seed, i_global, 0, &state[i_global]);
 }
 
-__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *dt_dev, int *FIRE_gate){
+__global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *dt_dev, int *FIRE_gate_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
 
   if(i_global<NP){
@@ -38,8 +38,9 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/(*L_dev));
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
   }
-if(i_global==0)
-  FIRE_gate_dev[0] =1;
+   if(i_global == 0)
+      FIRE_gate_dev[0] = 0;
+
 }
 
 __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev,int *FIRE_gate_dev){
@@ -347,7 +348,7 @@ int main(){
   for(;;){
     clock++;
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev);
-    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,dt_dev);
+    eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,dt_dev,FIRE_gate_dev);
     FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev,FIRE_gate_dev);
     len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
     int reduce=NP/2,remain=NP-NP/2;
