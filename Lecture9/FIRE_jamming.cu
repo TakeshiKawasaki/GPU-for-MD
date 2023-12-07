@@ -225,7 +225,7 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pot_dev,dou
       dr = sqrt(dx*dx+dy*dy);
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij)
-	      pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
+          pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
     }
   }
 }
@@ -242,7 +242,6 @@ __global__ void init_gate_kernel(int *gate_dev, int c){
 __global__ void init_scalar_kernel(double *a_dev, double d){
   a_dev[0]=d;
 }
-
 
 __global__ void init_map_kernel(int *map_dev,int M){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
