@@ -1,2 +1,2 @@
 ## FIRE method for jamming system
-$\varphi=0.80$ 
+From the random configuration at $\varphi=0.80$ with $N=10000$:  $2$sec.
