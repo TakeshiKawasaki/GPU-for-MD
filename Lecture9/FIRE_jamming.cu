@@ -22,7 +22,7 @@ const double dtmax =0.05;
 const double dtmin =0.0001;
 const double RCHK = 3.0;
 const double rcut = 1.4;
-const double phi = 0.7;
+const double phi = 0.8;
 const double f_thresh= 1.e-10;
 
 //Initialization of "curandState"
