@@ -13,17 +13,17 @@ using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 2e+3; //Particle number.
+const int  NP = 10000; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
-const int  NN = 100;
-const int  NPC = 1000; // Number of the particles in the neighbour cell 
+const int  NN = 50;
+const int  NPC = 100; // Number of the particles in the neighbour cell 
 const double dt0 = 0.01;
-const double dtmax=0.05;
-const double dtmin=0.001;
-const double RCHK= 2.0;
-const double rcut= 1.0;
-const double phi = 0.90;
-const double f_thresh= 1.e-12;
+const double dtmax =0.05;
+const double dtmin =0.0001;
+const double RCHK = 3.0;
+const double rcut = 1.4;
+const double phi = 0.7;
+const double f_thresh= 1.e-10;
 
 //Initialization of "curandState"
 __global__ void setCurand(unsigned long long seed, curandState *state){
@@ -42,9 +42,9 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/(*L_dev));
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
   }
-   if(i_global == 0){
+  if(i_global == 0){
       FIRE_gate_dev[0] = 1;
-   }
+  }
 }
 
 __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev,int *FIRE_gate_dev){
@@ -71,18 +71,18 @@ __global__ void FIRE_reset_dev(double *vx_dev, double *vy_dev,double *power_dev,
     if(power_dev[0] < 0){
       vx_dev[i_global] = 0.0; vy_dev[i_global] = 0.0;
       if(i_global == 0){
-	       alpha_dev[0] = 0.1;
-	       dt_dev[0] *= 0.5;
-         FIRE_param_gate_dev[0]=0;
+	alpha_dev[0] = 0.1;
+	dt_dev[0] *= 0.5;
+	FIRE_param_gate_dev[0]=0;
       }
     }
-    else{ //this should be changed into five times criterion
+    else{ //five-times criterion
       FIRE_param_gate_dev[0]++;
       if(i_global == 0 && FIRE_param_gate_dev[0]>4){
-       //printf("power=%.25f,alpha=%.16f,dt=%f\n",power_dev[0],alpha_dev[0],dt_dev[0]);
-	     alpha_dev[0] *= 0.99;
-       if(dt_dev[0] < dtmax)
-   	     dt_dev[0] *= 1.1;
+	//printf("power=%.25f,alpha=%.16f,dt=%f\n",power_dev[0],alpha_dev[0],dt_dev[0]);
+	alpha_dev[0] *= 0.99;
+	if(dt_dev[0] < dtmax)
+	  dt_dev[0] *= 1.1;
         FIRE_param_gate_dev[0]=0;
       }
     }
@@ -110,19 +110,18 @@ __global__ void update(double *L_dev,double *x_dev,double *y_dev,double *dx_dev,
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   
   if(gate_dev[0] == 1 && i_global<NP){
-    
     list_dev[NN*i_global]=0;      
     for (int j=0; j<NP; j++)
       if(j != i_global){
       	dx = x_dev[i_global] - x_dev[j];
-	      dy = y_dev[i_global] - y_dev[j];
-	      dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
-	      dy -= (*L_dev)*floor(dy/(*L_dev)+0.5);	  
-	      r2 = dx*dx + dy*dy;
-	      if(r2 < RCHK*RCHK){
-	        list_dev[NN*i_global]++;
-	        list_dev[NN*i_global+list_dev[NN*i_global]]=j;
-	      }
+	dy = y_dev[i_global] - y_dev[j];
+	dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
+	dy -= (*L_dev)*floor(dy/(*L_dev)+0.5);	  
+	r2 = dx*dx + dy*dy;
+	if(r2 < RCHK*RCHK){
+	  list_dev[NN*i_global]++;
+	  list_dev[NN*i_global+list_dev[NN*i_global]]=j;
+	}
       }
     //    printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
@@ -152,7 +151,7 @@ __global__ void cell_map(double *L_dev,double *x_dev,double *y_dev,int *map_dev,
     map_dev[(nx+M*ny)*NPC+num+1] = i_global;
   }
 }
-  
+
 __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_dev,double *dy_dev,int *list_dev,int *map_dev,int *gate_dev, int M)
 {
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
@@ -165,24 +164,24 @@ __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_d
     nx=f((int)(x_dev[i_global]*(double)M/(double)(*L_dev)),M);
     ny=f((int)(y_dev[i_global]*(double)M/(double)(*L_dev)),M);
     for(m=ny-1;m<=ny+1;m++)
-      for(l=nx-1;l<=nx+1;l++){
-	        for(k=1; k<=map_dev[(f(l,M)+M*f(m,M))*NPC]; k++){
-	          j = map_dev[(f(l,M)+M*f(m,M))*NPC+k];
-	          if(j != i_global){
-	            dx =x_dev[i_global] - x_dev[j];
-	            dy =y_dev[i_global] - y_dev[j];
-	            dx -=(*L_dev)*floor(dx/(*L_dev)+0.5);
-	            dy -=(*L_dev)*floor(dy/(*L_dev)+0.5);	  
-	            r2 = dx*dx + dy*dy;
-	            if(r2 < RCHK*RCHK){
-	              list_dev[NN*i_global]++;
-	              list_dev[NN*i_global+list_dev[NN*i_global]]=j;
-	             // printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);     
-	            }
-	          }
-	       }
-    }
-    //    printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
+      for(l=nx-1;l<=nx+1;l++)
+	for(k=1; k<=map_dev[(f(l,M)+M*f(m,M))*NPC]; k++){
+	  j = map_dev[(f(l,M)+M*f(m,M))*NPC+k];
+	  if(j != i_global){
+	    dx =x_dev[i_global] - x_dev[j];
+	    dy =y_dev[i_global] - y_dev[j];
+	    dx -=(*L_dev)*floor(dx/(*L_dev)+0.5);
+	    dy -=(*L_dev)*floor(dy/(*L_dev)+0.5);	  
+	    r2 = dx*dx + dy*dy;
+	    if(r2 < RCHK*RCHK){
+	      list_dev[NN*i_global]++;
+	      list_dev[NN*i_global+list_dev[NN*i_global]]=j;
+	      // printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);     
+	    }
+	  }
+	}
+    // if(i_global == 0)
+    //  printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
   } 
@@ -202,9 +201,9 @@ __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,doubl
       dr = sqrt(dx*dx+dy*dy);
       a_ij = 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij){
-	      dU_r = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
-	      fx_dev[i_global] += dU_r*dx/dr;
-	      fy_dev[i_global] += dU_r*dy/dr;
+	dU_r = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
+	fx_dev[i_global] += dU_r*dx/dr;
+	fy_dev[i_global] += dU_r*dy/dr;
       }
     }
     // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
@@ -225,7 +224,7 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pot_dev,dou
       dr = sqrt(dx*dx+dy*dy);
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij)
-          pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
+	pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
     }
   }
 }
@@ -336,7 +335,7 @@ int main(){
   cudaMalloc((void**)&phi_dev, sizeof(double)); 
   cudaMalloc((void**)&gate_dev, sizeof(int));
   cudaMalloc((void**)&FIRE_gate_dev, sizeof(int)); 
-   cudaMalloc((void**)&FIRE_param_gate_dev, sizeof(int)); 
+  cudaMalloc((void**)&FIRE_param_gate_dev, sizeof(int)); 
   cudaMalloc((void**)&remain_dev, sizeof(int));
   cudaMalloc((void**)&reduce_dev, sizeof(int));
   cudaMalloc((void**)&list_dev,  NB * NT * NN* sizeof(int)); 
@@ -359,7 +358,7 @@ int main(){
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
   cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
   cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
- 
+  
   measureTime();  
   for(;;){
     clock++;
@@ -379,20 +378,20 @@ int main(){
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
     cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
     cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
-  //////////////////////////
-   // if(clock%1000==0)
-      cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
-  //  cout<<FIRE_gate<<endl;
+    //////////////////////////
+    // if(clock%1000==0){
+    cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
+    //  cout<<FIRE_gate<<endl;
     if(FIRE_gate == 1){
       cudaMemcpy(fx,fx_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
-      cudaMemcpy(fy,fy_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
-      cout<<"count= "<< clock <<" fx= "<<fx[0]<<" fy= "<<fy[0]<<endl;
+      // cudaMemcpy(fy,fy_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
+      cout<<"count= "<< clock <<" fx= "<<fx[0]<<endl;
       break;
     }
-  //////////////////////////
+    //////////////////////////
   }
   sec = measureTime()/1000.;
-  cout<<"time(sec):"<<sec<<endl;
+  cout<<"time(sec):"<< sec <<endl;
   cudaFree(x_dev);
   cudaFree(vx_dev);
   cudaFree(y_dev);
