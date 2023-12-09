@@ -13,17 +13,17 @@ using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 10000; //Particle number.
+const int  NP = 50000; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 50;
-const int  NPC = 100; // Number of the particles in the neighbour cell 
-const double dt0 = 0.01;
-const double dtmax =0.05;
+const int  NPC = 50; // Number of the particles in the neighbour cell 
+const double dt0 = 0.005;
+const double dtmax =0.1;
 const double dtmin =0.0001;
-const double RCHK = 3.0;
+const double RCHK = 1.7;
 const double rcut = 1.4;
 const double phi = 0.8;
-const double f_thresh= 1.e-10;
+const double f_thresh= 1.e-14;
 
 //Initialization of "curandState"
 __global__ void setCurand(unsigned long long seed, curandState *state){
@@ -33,7 +33,7 @@ __global__ void setCurand(unsigned long long seed, curandState *state){
 
 __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *dt_dev, int *FIRE_gate_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-
+  
   if(i_global<NP){
     vx_dev[i_global] +=  fx_dev[i_global]*dt_dev[0];
     vy_dev[i_global] +=  fy_dev[i_global]*dt_dev[0];
@@ -41,10 +41,10 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     y_dev[i_global]  +=  vy_dev[i_global]*dt_dev[0];
     x_dev[i_global]  -= (*L_dev)*floor(x_dev[i_global]/(*L_dev));
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
+    
   }
-  if(i_global == 0){
-      FIRE_gate_dev[0] = 1;
-  }
+  if(i_global == 0)
+    FIRE_gate_dev[0] = 1;  
 }
 
 __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, double *fy_dev, double *power_dev,double *alpha_dev,int *FIRE_gate_dev){
@@ -74,16 +74,19 @@ __global__ void FIRE_reset_dev(double *vx_dev, double *vy_dev,double *power_dev,
 	alpha_dev[0] = 0.1;
 	dt_dev[0] *= 0.5;
 	FIRE_param_gate_dev[0]=0;
+	//   printf("reset \n");
       }
     }
     else{ //five-times criterion
-      FIRE_param_gate_dev[0]++;
-      if(i_global == 0 && FIRE_param_gate_dev[0]>4){
-	//printf("power=%.25f,alpha=%.16f,dt=%f\n",power_dev[0],alpha_dev[0],dt_dev[0]);
-	alpha_dev[0] *= 0.99;
-	if(dt_dev[0] < dtmax)
-	  dt_dev[0] *= 1.1;
-        FIRE_param_gate_dev[0]=0;
+      if(i_global ==0){
+	FIRE_param_gate_dev[0]++;
+	if(FIRE_param_gate_dev[0]>4){
+	  //printf("power=%.25f,alpha=%.16f,dt=%f\n",power_dev[0],alpha_dev[0],dt_dev[0]);
+	  alpha_dev[0] *= 0.99;
+	  if(dt_dev[0] < dtmax)
+	    dt_dev[0] *= 1.1;
+	  FIRE_param_gate_dev[0]=0;
+	}
       }
     }
   }
@@ -180,11 +183,11 @@ __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_d
 	    }
 	  }
 	}
-    // if(i_global == 0)
-    //  printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
+    //if(i_global == 0)
+    //printf("i=%d, list=%d\n",i_global,list_dev[NN*i_global]);      
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
-  } 
+  }
 }
 
 __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double *L_dev,int *list_dev){
@@ -379,9 +382,9 @@ int main(){
     cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
     cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
     //////////////////////////
-    // if(clock%1000==0){
+    // if(clock%1000==0)
     cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
-    //  cout<<FIRE_gate<<endl;
+    //cout<<FIRE_gate<<endl;
     if(FIRE_gate == 1){
       cudaMemcpy(fx,fx_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
       // cudaMemcpy(fy,fy_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
