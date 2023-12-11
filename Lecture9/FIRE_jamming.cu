@@ -13,10 +13,10 @@ using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 50000; //Particle number.
+const int  NP = 100000; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 50;
-const int  NPC = 50; // Number of the particles in the neighbour cell 
+const int  NPC = 100; // Number of the particles in the neighbour cell 
 const double dt0 = 0.005;
 const double dtmax =0.1;
 const double dtmin =0.0001;
@@ -188,6 +188,9 @@ __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_d
     dx_dev[i_global]=0.;
     dy_dev[i_global]=0.;
   }
+  __syncthreads();
+  if(i_global == 0)
+    gate_dev[0] = 0;
 }
 
 __global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double *L_dev,int *list_dev){
@@ -376,7 +379,7 @@ int main(){
       len_div<<<1,1>>>(reduce_dev,remain_dev);
     }
     FIRE_reset_dev<<<NB,NT>>>(vx_dev,vy_dev,power_dev,alpha_dev,dt_dev,FIRE_param_gate_dev);
-    init_gate_kernel<<<1,1>>>(gate_dev,0);
+    // init_gate_kernel<<<1,1>>>(gate_dev,0);
     disp_gate_kernel<<<NB,NT>>>(vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_dev);
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
     cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
