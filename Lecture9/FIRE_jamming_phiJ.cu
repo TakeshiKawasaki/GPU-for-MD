@@ -409,7 +409,7 @@ int main(){
     for(;;){
       clock++;
       FIRE(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,power_dev,alpha_dev,dt_dev,FIRE_gate_dev,FIRE_param_gate_dev,reduce_dev,remain_dev);
-      list_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,dt_dev,M,map_dev,gate_dev,list_dev);
+      list_auto_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,dt_dev,M,map_dev,gate_dev,list_dev);
       // if(clock%1000==0)
       cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
       //cout<<FIRE_gate<<endl;
