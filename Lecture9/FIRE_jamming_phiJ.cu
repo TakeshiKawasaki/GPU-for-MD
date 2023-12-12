@@ -13,16 +13,16 @@ using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 3000; //Particle number.
+const int  NP = 15000; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 50;
 const int  NPC = 100; // Number of the particles in the neighbour cell 
 const double dt0 = 0.005;
-const double dtmax =0.1;
+const double dtmax =0.05;
 const double dtmin =0.001;
 const double RCHK = 1.7;
 const double rcut = 1.4;
-const double phiini = 0.82;
+const double phiini = 0.83;
 const double phimax =0.845;
 const double f_thresh= 1.e-10;
 
@@ -311,6 +311,39 @@ __global__ void len_div(int *reduce_dev,int *remain_dev){
   }
 }
 
+void list_update(double *L_dev,double *x_dev, double *y_dev,double *vx_dev, double *vy_dev, double *dx_dev,double *dy_dev, double *dt_dev, int M, int *map_dev, int *gate_dev,int *list_dev){
+  disp_gate_kernel<<<NB,NT>>>(vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_dev);
+  init_map_kernel<<<M*M,NPC>>>(map_dev,M);
+  cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
+  cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
+}
+
+void add_reduction_array(double *array_dev, int *reduce_dev,int *remain_dev){
+  len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
+  int reduce=NP/2,remain=NP-NP/2;
+  while(reduce>0){
+    add_reduction<<<(reduce+NT-1)/NT,NT>>>(array_dev,reduce_dev,remain_dev);
+    reduce = remain/2;remain-=reduce;
+    len_div<<<1,1>>>(reduce_dev,remain_dev);
+  }
+}
+
+
+void FIRE(double *x_dev, double *y_dev,double  *vx_dev, double *vy_dev, double *fx_dev,double *fy_dev, double *a_dev,double *L_dev, int *list_dev, double *power_dev, double *alpha_dev, double *dt_dev, int *FIRE_gate_dev,int *FIRE_param_gate_dev, int *reduce_dev, int *remain_dev){
+  calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev);
+  eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,dt_dev,FIRE_gate_dev);
+  FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev,FIRE_gate_dev);
+  len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
+  int reduce=NP/2,remain=NP-NP/2;
+  while(reduce>0){
+    add_reduction<<<(reduce+NT-1)/NT,NT>>>(power_dev,reduce_dev,remain_dev);
+    reduce = remain/2;remain-=reduce;
+    len_div<<<1,1>>>(reduce_dev,remain_dev);
+  }
+  FIRE_reset_dev<<<NB,NT>>>(vx_dev,vy_dev,power_dev,alpha_dev,dt_dev,FIRE_param_gate_dev); 
+}
+
+
 int main(){
   double *x,*vx,*y,*vy,*pot,*x_dev,*vx_dev,*y_dev,*dx_dev,*dy_dev,*vy_dev,*pot_dev,*a_dev,*fx_dev,*fy_dev,*power_dev,*L_dev,*deltaphi_dev,deltaphi;
   double *dt_dev,*alpha_dev,*phi_dev,phi;
@@ -370,46 +403,24 @@ int main(){
   cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
   cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);  
 
-  init_scalar_kernel<<<1,1>>>(deltaphi_dev,1.e-3);
+  init_scalar_kernel<<<1,1>>>(deltaphi_dev,1.e-4);
   for(;;){
     measureTime();  
     for(;;){
       clock++;
-      calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev);
-      eom_kernel<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,dt_dev,FIRE_gate_dev);
-      FIRE_synth_dev<<<NB,NT>>>(vx_dev,vy_dev,fx_dev,fy_dev,power_dev,alpha_dev,FIRE_gate_dev);
-      len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
-      int reduce=NP/2,remain=NP-NP/2;
-      while(reduce>0){
-	add_reduction<<<(reduce+NT-1)/NT,NT>>>(power_dev,reduce_dev,remain_dev);
-	reduce = remain/2;remain-=reduce;
-	len_div<<<1,1>>>(reduce_dev,remain_dev);
-      }
-      FIRE_reset_dev<<<NB,NT>>>(vx_dev,vy_dev,power_dev,alpha_dev,dt_dev,FIRE_param_gate_dev);
-      // init_gate_kernel<<<1,1>>>(gate_dev,0);
-      disp_gate_kernel<<<NB,NT>>>(vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_dev);
-      init_map_kernel<<<M*M,NPC>>>(map_dev,M);
-      cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
-      cell_list<<<NB,NT>>>(L_dev,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
-      //////////////////////////
+      FIRE(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,power_dev,alpha_dev,dt_dev,FIRE_gate_dev,FIRE_param_gate_dev,reduce_dev,remain_dev);
+      list_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,dt_dev,M,map_dev,gate_dev,list_dev);
       // if(clock%1000==0)
       cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
       //cout<<FIRE_gate<<endl;
       if(FIRE_gate == 1){
 	calc_energy_kernel<<<NB,NT>>>(x_dev,y_dev,pot_dev,a_dev,L_dev,list_dev);
-	len_ini<<<1,1>>>(reduce_dev,remain_dev,NP);
-	int reduce=NP/2,remain=NP-NP/2;
-	while(reduce>0){
-	  add_reduction<<<(reduce+NT-1)/NT,NT>>>(pot_dev,reduce_dev,remain_dev);
-	  reduce = remain/2;remain-=reduce;
-	  len_div<<<1,1>>>(reduce_dev,remain_dev);
-	}
+	add_reduction_array(pot_dev,reduce_dev,remain_dev);
 	cudaMemcpy(pot,pot_dev, NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
 	cudaMemcpy(&phi,phi_dev, sizeof(double),cudaMemcpyDeviceToHost);
 	cudaMemcpy(&deltaphi,deltaphi_dev, sizeof(double),cudaMemcpyDeviceToHost);
 	cout<<"phi="<< phi << "count= "<< clock <<" pot= "<<pot[0]/NP <<endl;
-	clock=0;
-
+	clock = 0;
 	break;
       }
       //////////////////////////
