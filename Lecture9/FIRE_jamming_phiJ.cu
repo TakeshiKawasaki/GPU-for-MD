@@ -311,7 +311,7 @@ __global__ void len_div(int *reduce_dev,int *remain_dev){
   }
 }
 
-void list_update(double *L_dev,double *x_dev, double *y_dev,double *vx_dev, double *vy_dev, double *dx_dev,double *dy_dev, double *dt_dev, int M, int *map_dev, int *gate_dev,int *list_dev){
+void list_auto_update(double *L_dev,double *x_dev, double *y_dev,double *vx_dev, double *vy_dev, double *dx_dev,double *dy_dev, double *dt_dev, int M, int *map_dev, int *gate_dev,int *list_dev){
   disp_gate_kernel<<<NB,NT>>>(vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_dev);
   init_map_kernel<<<M*M,NPC>>>(map_dev,M);
   cell_map<<<NB,NT>>>(L_dev,x_dev,y_dev,map_dev,gate_dev,M);
