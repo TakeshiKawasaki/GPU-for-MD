@@ -36,6 +36,19 @@ export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
 ./add.out
 ```
 
+```shell:qsub_mpi.sh
+#!/bin/sh
+#$ -S /bin/sh
+#$ -cwd
+#$ -V
+#$ -q gpu.q
+#$ -l gpu=1
+export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
+nvidia-cuda-mps-control -d
+mpirun -n 2 FIRE_mpi.out # execute file
+```
+
+
 ## Lecture 1 <br>
 Basic operation of Cuda [1]
 ## Lecture 2 <br>
