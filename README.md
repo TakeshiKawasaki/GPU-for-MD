@@ -68,6 +68,9 @@ Langevin dynamics with interactions adopting automatic updating cell list
 ## Lecture 8 <br>
 Molecular dynamics (MD) with interactions adopting automatic updating cell list
 
+## Lecture 9 <be>
+FIRE algorithm for jamming configurations.
+
 
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/ <br>
