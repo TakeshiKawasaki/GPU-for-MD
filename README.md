@@ -18,11 +18,6 @@ The latter half， especially on the molecular dynamics code, is my original. Au
 ## Compilation with Cuda <br>
  `nvcc add.cu -o add.out` 
 
-```
-nvcc FIRE_mpi.cu -o FIRE_mpi.out 
--I/home/appl/openmpi-1.6.4-ic1217/include 
--L/home/appl/openmpi-1.6.4-ic1217/lib -I ~/inlcude -L ~/lib -lsprng -lcudart -lmpi
-```
 ## Execution <br>
 `./add.out` 
 
@@ -54,6 +49,14 @@ export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
 nvidia-cuda-mps-control -d
 mpirun -n 2 FIRE_mpi.out # execute file
 ```
+
+Compile for mps (by Jeong-san)
+```
+nvcc FIRE_mpi.cu -o FIRE_mpi.out 
+-I/home/appl/openmpi-1.6.4-ic1217/include 
+-L/home/appl/openmpi-1.6.4-ic1217/lib -I ~/inlcude -L ~/lib -lsprng -lcudart -lmpi
+```
+
 
 
 ## Lecture 1 <br>
