@@ -36,6 +36,7 @@ export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
 ./add.out
 ```
 
+This is for mpi + GPU (by Jeong-san)
 ```shell:qsub_mpi.sh
 #!/bin/sh
 #$ -S /bin/sh
