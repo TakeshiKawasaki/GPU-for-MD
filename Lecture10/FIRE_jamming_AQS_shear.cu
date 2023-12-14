@@ -258,7 +258,7 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pressure_de
 	dU_r = -(1-dr/a_ij)/a_ij;
 	pressure_dev[i_global] += 0.5*dU_r*dr/(2.0*(*L_dev)*(*L_dev));
 	stress_dev[i_global] += 0.5*dx*dy*dU_r/dr/((*L_dev)*(*L_dev));
-	pot_dev[i_global] += 0.5*0.5*(1.-dr/a_ij)*(1.-dr/a_ij)/NP;
+	pot_dev[i_global] += 0.5*0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
       }
     }
   }
@@ -306,9 +306,9 @@ __global__ void init_array_rand(double *x_dev, double c,curandState *state){
 __global__ void change_deltaphi(double *deltaphi_dev,double *phi_dev, double *pot_dev){
   if(*phi_dev >= phimax)
     *deltaphi_dev = -1.e-4;
-  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-11)
+  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-7)
     *deltaphi_dev = -1.e-5;
-  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-12)
+  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-8)
     *deltaphi_dev = -1.e-6;
   __syncthreads();
 }
