@@ -285,8 +285,8 @@ __global__ void volume_affine(double *x_dev, double *y_dev,double *phi_dev,doubl
   __syncthreads();
   
   if(i_global==0){
-    *phi_dev += *deltaphi_dev;
     *L_dev   *= sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));
+    *phi_dev += *deltaphi_dev;
   }
 }
 
