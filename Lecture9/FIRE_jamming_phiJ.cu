@@ -429,8 +429,8 @@ int main(){
       cout<<"phiJ="<< phi <<endl;
       break;
     }
-    volume_affine<<<NB,NT>>>(x_dev,y_dev,phi_dev,deltaphi_dev,L_dev);
-    change_deltaphi<<<1,1>>>(deltaphi_dev,phi_dev,pot_dev);
+   change_deltaphi<<<1,1>>>(deltaphi_dev,phi_dev,pot_dev); 
+   volume_affine<<<NB,NT>>>(x_dev,y_dev,phi_dev,deltaphi_dev,L_dev);
     sec = measureTime()/1000.;
     cout<<"time(sec):"<< sec <<endl;
   }
