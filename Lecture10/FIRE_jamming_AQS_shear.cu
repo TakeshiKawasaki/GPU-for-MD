@@ -13,7 +13,7 @@ using namespace std;
 
 //Using "const", the variable is shared into both gpu and cpu. 
 const int  NT = 1024; //Num of the cuda threads.
-const int  NP = 10000; //Particle number.
+const int  NP = 1000; //Particle number.
 const int  NB = (NP+NT-1)/NT; //Num of the cuda blocks.
 const int  NN = 50;
 const int  NPC = 100; // Number of the particles in the neighbour cell 
@@ -22,8 +22,8 @@ const double dtmax =0.05;
 const double dtmin =0.001;
 const double RCHK = 1.7;
 const double rcut = 1.4;
-const double phiini = 0.83;
-const double phimax = 0.844;
+const double phiini = 0.835;
+const double phimax = 0.845;
 const double f_thresh= 1.e-10;
 const double deltaphi_observe=1.e-4;
 
@@ -43,8 +43,9 @@ __global__ void eom_kernel(double*x_dev,double*y_dev,double *vx_dev,double *vy_d
     y_dev[i_global]  +=  vy_dev[i_global]*dt_dev[0];
 
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
-    x_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
-    x_dev[i_global]  -= *gamma_dev*(*L_dev)*floor((x_dev[i_global]-(*gamma_dev)*y_dev[i_global])/(*L_dev));    
+    x_dev[i_global]  -= *gamma_dev*(*L_dev)*floor(y_dev[i_global]/(*L_dev));    
+    x_dev[i_global]  -= (*L_dev)*floor((x_dev[i_global]-(*gamma_dev)*y_dev[i_global])/(*L_dev));
+
 
   }
   if(i_global == 0)
@@ -256,9 +257,9 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pressure_de
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij){
 	dU_r = -(1-dr/a_ij)/a_ij;
-	pressure_dev[i_global] += 0.5*dU_r*dr/(2.0*(*L_dev)*(*L_dev));
+	pressure_dev[i_global] -= 0.25*dU_r*dr/((*L_dev)*(*L_dev));
 	stress_dev[i_global] += 0.5*dx*dy*dU_r/dr/((*L_dev)*(*L_dev));
-	pot_dev[i_global] += 0.5*0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
+	pot_dev[i_global] += 0.25*(1.-dr/a_ij)*(1.-dr/a_ij);
       }
     }
   }
@@ -306,9 +307,9 @@ __global__ void init_array_rand(double *x_dev, double c,curandState *state){
 __global__ void change_deltaphi(double *deltaphi_dev,double *phi_dev, double *pot_dev){
   if(*phi_dev >= phimax)
     *deltaphi_dev = -1.e-4;
-  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-7)
-    *deltaphi_dev = -1.e-5;
   if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-8)
+    *deltaphi_dev = -1.e-5;
+  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-10)
     *deltaphi_dev = -1.e-6;
   __syncthreads();
 }
@@ -323,9 +324,8 @@ __global__ void volume_affine(double *x_dev, double *y_dev,double *phi_dev,doubl
   
   
   if(i_global==0){
- *L_dev   *= sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));    
- *phi_dev += *deltaphi_dev;
-   
+    *L_dev   *= sqrt(*phi_dev/(*phi_dev+*deltaphi_dev));
+    *phi_dev = M_PI*(1.0*1.0+1.4*1.4)*(double)NP/8./(*L_dev)/(*L_dev);
   }
   __syncthreads();
 }
@@ -510,11 +510,13 @@ int main(){
   ///initiallization/////////////////
   init_scalar_kernel<<<1,1>>>(phi_dev, phi+deltaphi_observe);  
   init_scalar_kernel<<<1,1>>>(deltaphi_dev, deltaphi_observe);
+  init_scalar_kernel<<<1,1>>>(delta_gamma_dev, 1.e-7);
   volume_affine<<<NB,NT>>>(x_dev,y_dev,phi_dev,deltaphi_dev,L_dev);
   FIRE(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,power_dev,alpha_dev,dt_dev,FIRE_gate_dev,FIRE_param_gate_dev,reduce_dev,remain_dev,gamma_dev);
   list_auto_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,dt_dev,M,map_dev,gate_dev,list_dev,gamma_dev);
+  cudaMemcpy(&phi,phi_dev, sizeof(double),cudaMemcpyDeviceToHost);
   ///////////////////////////////////
-  
+  cout<<"phi="<< phi <<"gamma="<< gamma << endl;  
   ///shear///////////////
   while(gamma < 1.0){ 
     shear_affine<<<NB,NT>>>(x_dev,y_dev,delta_gamma_dev,gamma_dev);
