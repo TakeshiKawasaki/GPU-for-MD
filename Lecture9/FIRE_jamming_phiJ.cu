@@ -228,7 +228,7 @@ __global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pot_dev,dou
       dr = sqrt(dx*dx+dy*dy);
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij)
-	pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
+	pot_dev[i_global]+= 0.5*0.5*(1.-dr/a_ij)*(1.-dr/a_ij)/NP;
     }
   }
 }
@@ -272,7 +272,7 @@ __global__ void init_array_rand(double *x_dev, double c,curandState *state){
 __global__ void change_deltaphi(double *deltaphi_dev,double *phi_dev, double *pot_dev){
   if(*phi_dev >= phimax)
     *deltaphi_dev = -1.e-4;
-  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-8)
+  if(*deltaphi_dev < 0 && pot_dev[0]/NP < 1.e-12)
     *deltaphi_dev = -1.e-6;
 }
 
