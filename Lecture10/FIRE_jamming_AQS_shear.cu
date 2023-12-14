@@ -518,6 +518,7 @@ int main(){
   while(gamma < 1.0){ 
     shear_affine<<<NB,NT>>>(x_dev,y_dev,delta_gamma_dev,gamma_dev);
     for(;;){
+      clock++;
       FIRE(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,power_dev,alpha_dev,dt_dev,FIRE_gate_dev,FIRE_param_gate_dev,reduce_dev,remain_dev,gamma_dev);
       list_auto_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,dt_dev,M,map_dev,gate_dev,list_dev,gamma_dev);
       cudaMemcpy(&FIRE_gate,FIRE_gate_dev,sizeof(int),cudaMemcpyDeviceToHost);
@@ -529,6 +530,7 @@ int main(){
 	cudaMemcpy(pressure,pressure_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
 	cudaMemcpy(&gamma,gamma_dev, sizeof(double),cudaMemcpyDeviceToHost);
 	cout<<"gamma= "<< gamma << " count= "<< clock <<" stress= "<<stress[0] <<" pressure= "<< pressure[0] <<endl;
+        clock = 0;
 	break;
       }
     }
