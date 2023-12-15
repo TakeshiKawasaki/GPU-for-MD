@@ -34,7 +34,7 @@ The latter half， especially on the molecular dynamics code, is my original. Au
 #$ -l gpu=1                                                                                                               
 
 export CUDA_VISIBLE_DEVICES=$SGE_HGR_gpu
-./add.out
+./a.out # change the name
 ```
 
 This is for mpi + GPU (by Jeong-san)
