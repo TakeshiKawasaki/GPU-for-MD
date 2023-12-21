@@ -59,9 +59,10 @@ __global__ void FIRE_synth_dev(double *vx_dev,double *vy_dev, double *fx_dev, do
   if(i_global<NP){
     f = sqrt(fx_dev[i_global]*fx_dev[i_global]+fy_dev[i_global]*fy_dev[i_global]);
     v = sqrt(vx_dev[i_global]*vx_dev[i_global]+vy_dev[i_global]*vy_dev[i_global]);
+    power_dev[i_global] = vx_dev[i_global]*fx_dev[i_global]+vy_dev[i_global]*fy_dev[i_global];    
     vx_dev[i_global] = (1.-alpha_dev[0])*vx_dev[i_global]+alpha_dev[0]*v*fx_dev[i_global]/(f+DBL_EPSILON);
     vy_dev[i_global] = (1.-alpha_dev[0])*vy_dev[i_global]+alpha_dev[0]*v*fy_dev[i_global]/(f+DBL_EPSILON);
-    power_dev[i_global] = vx_dev[i_global]*fx_dev[i_global]+vy_dev[i_global]*fy_dev[i_global];
+    
     if(f > f_thresh){
       FIRE_gate_dev[0]=0;      
     }
