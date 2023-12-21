@@ -4,6 +4,10 @@ To confirm the version of your mpi, execute <br>
 
 A shell script for compilation:
 ```
+nvcc  FIRE_shear_mpi.cu  -o  FIRE_shear_mpi.out -I/home/appl/openmpi-4.0.5-ic1912/include   -L/home/appl/openmpi-4.0.5-ic1912/lib -lmpi
+```
+A qsub code is:
+```
 #!/bin/sh
 #$ -S /bin/sh
 #$ -cwd
