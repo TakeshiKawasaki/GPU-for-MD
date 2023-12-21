@@ -786,5 +786,6 @@ int main(int argc, char** argv){
   free(y); 
   free(vy);
   free(pot); 
+　　　　MPI_Finalize()
   return 0;
 }
