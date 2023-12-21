@@ -1,6 +1,9 @@
 To confirm the version of your mpi, execute <br>
-`mpi -showme`
-
+`mpicc -showme`
+A result would be:
+```
+icc -I/home/appl/openmpi-4.0.5-ic1912/include -pthread -Wl,-rpath -Wl,/home/appl/openmpi-4.0.5-ic1912/lib -Wl,--enable-new-dtags -L/home/appl/openmpi-4.0.5-ic1912/lib -lmpi
+```
 
 A shell script for compilation:
 ```
