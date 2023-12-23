@@ -1,4 +1,7 @@
 # GPU-for-MD <br>
+<img width="668" alt="4818c976-50e6-4f5b-9ac0-9e43b5b1d55b" src="https://github.com/TakeshiKawasaki/GPU-for-MD/assets/72239760/37434823-460d-4784-b4ca-933c89af0b5b">
+
+
 This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].<br>
 [![CC BY-SA 4.0][cc-by-sa-image]][cc-by-sa]
