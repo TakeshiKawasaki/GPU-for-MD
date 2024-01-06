@@ -11,7 +11,7 @@ This work is licensed under a
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 
 The first half of this repository is based on a tutorial (https://physpeach.github.io/cuda-tutorial/) by Shukawa-san, a lab graduate. 
-The latter half， especially on the molecular dynamics code, is my original. Automatic update of the cell list in GPU　is quite essential.
+The latter is my original， especially on the molecular dynamics codes. 
 
 ## Obtaining the codes via Git (available in our clusters) <br>
  `git clone https://github.com/TakeshiKawasaki/GPU-for-MD repo` <br>
@@ -81,8 +81,19 @@ Langevin dynamics with interactions adopting automatic updating cell list
 Molecular dynamics (MD) with interactions adopting automatic updating cell list
 
 ## Lecture 9 <be>
-FIRE algorithm for jamming configurations.
+FIRE algorithm for getting jamming configurations.
 
+## Lecture 10 <be>
+FIRE algorithm for AQS shear.
+
+## Lecture 11 <be>
+FIRE algorithm for AQS shear + shear stabilization.
+
+## Lecture 12 <be>
+FIRE algorithm for AQS shear with MPI (multi ensembles).
+
+## Lecture 13 <be>
+FIRE algorithm for constant pressure AQS.
 
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/ <br>
