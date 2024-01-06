@@ -1,5 +1,5 @@
 Typical results:<br>
-<img width="1033" alt="ed300abd-51f7-4bd7-b462-2ae72636ec8a" src="https://github.com/TakeshiKawasaki/GPU-for-MD/assets/72239760/23d7b527-24d6-4081-8ebb-ca4f358bad82">
+<img width="800" alt="ed300abd-51f7-4bd7-b462-2ae72636ec8a" src="https://github.com/TakeshiKawasaki/GPU-for-MD/assets/72239760/23d7b527-24d6-4081-8ebb-ca4f358bad82">
 
 
 To confirm the version of your mpi, execute <br>
