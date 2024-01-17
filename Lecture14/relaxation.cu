@@ -124,54 +124,72 @@ __global__ void cell_list(double *L_dev,double *x_dev,double *y_dev,double *dx_d
 }
 
 
-__global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double *L_dev,int *list_dev,double *f_dev, double *pressure_dev,double *sigma_dev){
-  double dx,dy,dr,dU_r,a_ij;
+
+
+__global__ void calc_force_kernel(double*x_dev,double*y_dev,double *fx_dev,double *fy_dev,double *a_dev,double *L_dev,int *list_dev,double *gamma_dev, double *stress_dev,double *pressure_dev, double *f_dev){
+  double dx,dy,dy_temp,dr,dU_r,a_ij;
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global<NP){
     fx_dev[i_global]=0.0;
     fy_dev[i_global]=0.0;
-    f_dev[i_global]=0.0;
+    stress_dev[i_global]=0.0;
     pressure_dev[i_global]=0.0;
-    sigma_dev[i_global]=0.0;
     for(int j = 1; j<=list_dev[NN*i_global]; j++){
       dx = x_dev[list_dev[NN*i_global+j]]-x_dev[i_global];
       dy = y_dev[list_dev[NN*i_global+j]]-y_dev[i_global];
-      dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
-      dy -= (*L_dev)*floor(dy/(*L_dev)+0.5);	
+
+      dy_temp=dy;
+      dy -=(*L_dev)*floor(dy/(*L_dev)+0.5);
+      dx -= *gamma_dev*(*L_dev)*floor((dy_temp+0.5*(*L_dev))/(*L_dev));
+      dx -=(*L_dev)*floor(dx/(*L_dev)+0.5);
+
       dr = sqrt(dx*dx+dy*dy);
       a_ij = 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
       if(dr < a_ij){
-	dU_r = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
-	fx_dev[i_global] += dU_r*dx/dr;
-	fy_dev[i_global] += dU_r*dy/dr;
-	pressure_dev[i_global] -= dU_r*dr/(2.0**L_dev**L_dev);
-	sigma_dev[i_global] += dU_r*dx*dy/dr/(*L_dev**L_dev);
+	      dU_r = -(1-dr/a_ij)/a_ij; //derivertive of U wrt r.
+	      fx_dev[i_global] += dU_r*dx/dr;
+	      fy_dev[i_global] += dU_r*dy/dr;
+        stress_dev[i_global] += 0.5*dx*dy*dU_r/dr/((*L_dev)*(*L_dev));
+	      pressure_dev[i_global] -= 0.5*0.5*dr*dU_r/((*L_dev)*(*L_dev));
       }
     }
-    f_dev[i_global]+= sqrt(fx_dev[i_global]*fx_dev[i_global]+fy_dev[i_global]*fy_dev[i_global]);
-    // printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
+        f_dev[i_global] = sqrt(fx_dev[i_global]*fx_dev[i_global]+fy_dev[i_global]*fy_dev[i_global]);
+    //     printf("i=%d, fx=%f\n",i_global,fx_dev[i_global]);
   }
   __syncthreads();
 }
 
-__global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pot_dev,double *a_dev,double *L_dev,int *list_dev){
-  double dx,dy,dr,a_ij;
+
+
+__global__ void calc_energy_kernel(double*x_dev,double*y_dev,double *pressure_dev,double *stress_dev,double *pot_dev,double *a_dev,double *L_dev,int *list_dev,double *gamma_dev){
+  double dx,dy,dy_temp,dr,a_ij,dU_r;
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   if(i_global<NP){
     pot_dev[i_global]=0.0;
+    stress_dev[i_global]=0.0;
+    pressure_dev[i_global]=0.0;
     for(int j = 1; j<=list_dev[NN*i_global]; j++){
       dx = x_dev[list_dev[NN*i_global+j]]-x_dev[i_global];
       dy = y_dev[list_dev[NN*i_global+j]]-y_dev[i_global];
-      dx -= (*L_dev)*floor(dx/(*L_dev)+0.5);
-      dy -= (*L_dev)*floor(dy/(*L_dev)+0.5);
+
+      dy_temp=dy;
+      dy -=(*L_dev)*floor(dy/(*L_dev)+0.5);
+      dx -= *gamma_dev*(*L_dev)*floor((dy_temp+0.5*(*L_dev))/(*L_dev));
+      dx -=(*L_dev)*floor(dx/(*L_dev)+0.5);
+
       dr = sqrt(dx*dx+dy*dy);
       a_ij= 0.5*(a_dev[i_global]+a_dev[list_dev[NN*i_global+j]]);
-      if(dr < a_ij)
-	pot_dev[i_global]+= 0.5*(1.-dr/a_ij)*(1.-dr/a_ij);
+      if(dr < a_ij){
+	dU_r = -(1-dr/a_ij)/a_ij;
+	pressure_dev[i_global] -= 0.25*dU_r*dr/((*L_dev)*(*L_dev));
+	stress_dev[i_global] += 0.5*dx*dy*dU_r/dr/((*L_dev)*(*L_dev));
+	pot_dev[i_global] += 0.25*(1.-dr/a_ij)*(1.-dr/a_ij)/(double)NP;
+      }
     }
   }
   __syncthreads();
 }
+
 
 __global__ void copy_kernel(double *x0_dev, double *y0_dev, double *x_dev, double *y_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
@@ -253,25 +271,29 @@ void add_reduction_array(double *array_dev, int *reduce_dev,int *remain_dev){
 }
 
 
-__global__ void SD(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev){
+__global__ void SD(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev,double *gamma_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
-
+  double y_temp; 
   if(i_global<NP){
     vx_dev[i_global] = fx_dev[i_global]*dt;
     vy_dev[i_global] = fy_dev[i_global]*dt;
     x_dev[i_global] += vx_dev[i_global]*dt;
     y_dev[i_global] += vy_dev[i_global]*dt;
 
-    x_dev[i_global]  -= *L_dev*floor(x_dev[i_global]/(*L_dev));
-    y_dev[i_global]  -= *L_dev*floor(y_dev[i_global]/(*L_dev));
+    
+    y_temp = y_dev[i_global];
+    y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
+    x_dev[i_global]  -= *gamma_dev*(*L_dev)*floor(y_temp/(*L_dev));
+    x_dev[i_global]  -= (*L_dev)*floor((x_dev[i_global]-(*gamma_dev)*y_dev[i_global])/(*L_dev));
+
   }
 }
 
 
-__global__ void SD_P(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev, double *pressure_dev){
+__global__ void SD_P(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double *L_dev, double *pressure_dev,double *gamma_dev){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   double vol_dot_dev,L_dev_temp;
-
+  double y_temp;
   if(i_global<NP){
     L_dev_temp=*L_dev;
     vx_dev[i_global] = fx_dev[i_global]*dt;
@@ -282,8 +304,13 @@ __global__ void SD_P(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,dou
     vol_dot_dev = (double)NP*(pressure_dev[0] - p0)*dt;
     *L_dev += 0.5/L_dev_temp*(vol_dot_dev)*dt;
 
-    x_dev[i_global] *= (*L_dev)/L_dev_temp;
-    y_dev[i_global] *= (*L_dev)/L_dev_temp;
+    //x_dev[i_global] *= (*L_dev)/L_dev_temp;
+   // y_dev[i_global] *= (*L_dev)/L_dev_temp;
+
+    y_temp = y_dev[i_global];
+    y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
+    x_dev[i_global]  -= *gamma_dev*(*L_dev)*floor(y_temp/(*L_dev));
+    x_dev[i_global]  -= (*L_dev)*floor((x_dev[i_global]-(*gamma_dev)*y_dev[i_global])/(*L_dev));
 
     x_dev[i_global]  -= *L_dev*floor(x_dev[i_global]/(*L_dev));
     y_dev[i_global]  -= *L_dev*floor(y_dev[i_global]/(*L_dev));
@@ -297,7 +324,7 @@ __global__ void SD_P(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,dou
 
 int main(){
   double *x,*vx,*y,*vy,*pot,*x_dev,*vx_dev,*y_dev,*dx_dev,*dy_dev,*vy_dev,*pot_dev,*a_dev,*fx_dev,*fy_dev,*L_dev,*deltaphi_dev,deltaphi;
-  double *f_dev,*pressure_dev,*sigma_dev,*phi_dev,*gamma_dev;
+  double *f_dev,*pressure_dev,*stress_dev,*phi_dev,*gamma_dev;
   int *list_dev,*map_dev,*gate_dev,*remain_dev,*reduce_dev;
   int *FIRE_gate_dev,FIRE_gate,*FIRE_param_gate_dev;
   int clock=0;
@@ -323,7 +350,8 @@ int main(){
   cudaMalloc((void**)&fy_dev, NB * NT * sizeof(double));
   cudaMalloc((void**)&f_dev, NB * NT * sizeof(double));
   cudaMalloc((void**)&pressure_dev, NB * NT * sizeof(double));
-  cudaMalloc((void**)&sigma_dev, NB * NT * sizeof(double));
+  cudaMalloc((void**)&stress_dev, NB * NT * sizeof(double));
+   cudaMalloc((void**)&f_dev, NB * NT * sizeof(double));
   cudaMalloc((void**)&pot_dev, NB * NT * sizeof(double));
   cudaMalloc((void**)&a_dev,  NB * NT * sizeof(double)); 
   cudaMalloc((void**)&L_dev, sizeof(double)); 
@@ -365,12 +393,13 @@ int main(){
   measureTime();  
   for(;;){
     clock++;
-    calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,f_dev,pressure_dev,sigma_dev);
+//    calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,f_dev,pressure_dev,sigma_dev);
+    calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,L_dev,list_dev,gamma_dev,stress_dev,pressure_dev,f_dev);
     double sum_f = thrust::reduce(thrust::device_pointer_cast(f_dev), thrust::device_pointer_cast(f_dev + NB * NT),0.0,thrust::plus<double>());
     double sum_pressure = thrust::reduce(thrust::device_pointer_cast(pressure_dev), thrust::device_pointer_cast(pressure_dev + NB * NT),0.0,thrust::plus<double>());
     cudaMemcpy(&pressure_dev[0],&sum_pressure, sizeof(double),cudaMemcpyHostToDevice); 
 
-    SD<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev);
+    SD<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,gamma_dev);
     //  SD_P<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,L_dev,pressure_dev);
     list_auto_update(L_dev,x_dev,y_dev,vx_dev,vy_dev,dx_dev,dy_dev,M,map_dev,gate_dev,list_dev,gamma_dev);
 
