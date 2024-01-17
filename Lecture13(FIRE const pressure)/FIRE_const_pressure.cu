@@ -105,8 +105,8 @@ __global__ void eom_kernel_CP(double*x_dev,double*y_dev,double *vx_dev,double *v
     x_dev[i_global]  +=  vx_dev[i_global]*dt_dev[0];
     y_dev[i_global]  +=  vy_dev[i_global]*dt_dev[0];
 
-//    x_dev[i_global] *= (*L_dev)/L_dev_temp;
-//    y_dev[i_global] *= (*L_dev)/L_dev_temp;
+   x_dev[i_global] *= (*L_dev)/L_dev_temp;
+   y_dev[i_global] *= (*L_dev)/L_dev_temp;
    
     y_temp = y_dev[i_global];
     y_dev[i_global]  -= (*L_dev)*floor(y_dev[i_global]/(*L_dev));
