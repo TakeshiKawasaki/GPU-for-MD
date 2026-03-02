@@ -97,6 +97,6 @@ FIRE algorithm for constant pressure AQS.
 
 ## Reference <br>
 [1] https://physpeach.github.io/cuda-tutorial/ <br>
-[2] NVIDIA's instructions:  https://http.download.nvidia.com/developer/cuda/jp/CUDA_Programming_Basics_PartI_jp.pdf <br>
+[2] NVIDIA's instructions:  [https://http.download.nvidia.com/developer/cuda/jp/CUDA_Programming_Basics_PartI_jp.pdf ](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)<br>
 [3] BOOK: "CUDA by example" 汎用GPUプログラミング入門 インプレスジャパン  Github:https://github.com/CodedK/CUDA-by-Example-source-code-for-the-book-s-examples-
 
