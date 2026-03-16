@@ -6,6 +6,6 @@ __global__ void myKernel(){
 
 int main(){
   cout<<"hello CUDA"<< endl;
-  myKernel<<<1,1>>>endl;
+  myKernel<<<1,1>>>();
   return 0;
 }
