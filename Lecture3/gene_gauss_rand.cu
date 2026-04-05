@@ -95,7 +95,7 @@ int main(){
   
   printf("\nav = %f\nsig = %f\n",av,sigma);
   
-  for(uint i = 0; i < N; i++)
+  for(uint i = 0; i < N*1000; i++)
     gauss_rand_cpu();
   
   cout << sec <<"sec"<<endl;  
