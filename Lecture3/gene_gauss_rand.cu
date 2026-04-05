@@ -45,6 +45,7 @@ double gauss_rand_cpu(void)
 __global__ void setCurand(unsigned long long seed, curandState *state){
   int i_global = threadIdx.x + blockIdx.x*blockDim.x;
   curand_init(seed, i_global, 0, &state[i_global]);
+// seed, sequence, offset, state
 }
 
 //Gaussian random number's generation
