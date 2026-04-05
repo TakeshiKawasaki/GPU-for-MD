@@ -82,8 +82,10 @@ int main(){
   rnd = (float*)malloc(NB*NT*sizeof(float));
   
   double av = 0., sigma = 0.,sec;
-  
+
+  measureTime();
   gaussrand(rnd);
+  sec = measureTime()/1000;
   
   for(uint i = 0; i < N; i++)
     av += rnd[i]/N;
@@ -93,12 +95,9 @@ int main(){
   
   printf("\nav = %f\nsig = %f\n",av,sigma);
   
-  measureTime();
   for(uint i = 0; i < N; i++)
     gauss_rand_cpu();
   
-  
-  sec = measureTime()/1000;
   cout << sec <<"sec"<<endl;  
   
   free(rnd);  
