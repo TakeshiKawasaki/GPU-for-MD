@@ -139,8 +139,8 @@ int main(){
   init_array(vx,NT*NB,0.);
   init_array(vy,NT*NB,0.);
 
-  cudaMemcpy(x_dev,   x, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
-  cudaMemcpy(y_dev,   y, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
+//   cudaMemcpy(x_dev,   x, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
+ //  cudaMemcpy(y_dev,   y, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
   cudaMemcpy(vx_dev, vx, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
   cudaMemcpy(vy_dev, vy, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
   cudaMemcpy(a_dev,  a, NB * NT* sizeof(double),cudaMemcpyHostToDevice);
