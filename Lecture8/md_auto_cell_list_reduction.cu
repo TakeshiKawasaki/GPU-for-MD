@@ -64,6 +64,8 @@ __global__ void md_kernel_pre(double*x_dev,double*y_dev,double *vx_dev,double *v
     vx_dev[i_global] += 0.5*fx_dev[i_global]*dt_md;
     vy_dev[i_global] += 0.5*fy_dev[i_global]*dt_md;
     }
+    x_dev[i_global]  -= LB*floor(x_dev[i_global]/LB);
+    y_dev[i_global]  -= LB*floor(y_dev[i_global]/LB);
 }
 
 __global__ void md_kernel_post(double*x_dev,double*y_dev,double *vx_dev,double *vy_dev,double *fx_dev,double *fy_dev,double LB){
@@ -73,6 +75,7 @@ __global__ void md_kernel_post(double*x_dev,double*y_dev,double *vx_dev,double *
     vx_dev[i_global] += 0.5*fx_dev[i_global]*dt_md;
     vy_dev[i_global] += 0.5*fy_dev[i_global]*dt_md;
   }
+
 }
 
 
@@ -386,7 +389,7 @@ int main(){
     calc_force_kernel<<<NB,NT>>>(x_dev,y_dev,fx_dev,fy_dev,a_dev,LB,list_dev);
     md_kernel_post<<<NB,NT>>>(x_dev,y_dev,vx_dev,vy_dev,fx_dev,fy_dev,LB);
     init_gate_kernel<<<1,1>>>(gate_dev,0);
-    disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_bd);
+    disp_gate_kernel<<<NB,NT>>>(LB,vx_dev,vy_dev,dx_dev,dy_dev,gate_dev,dt_md);
     init_map_kernel<<<M*M,NPC>>>(map_dev,M);
     cell_map<<<NB,NT>>>(LB,x_dev,y_dev,map_dev,gate_dev,M);
     cell_list<<<NB,NT>>>(LB,x_dev,y_dev,dx_dev,dy_dev,list_dev,map_dev,gate_dev,M);
@@ -403,6 +406,9 @@ int main(){
       cudaMemcpy(pot,pot_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
       cudaMemcpy(vx,vx_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
       cudaMemcpy(vy,vy_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
+      cudaMemcpy(x,x_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
+      cudaMemcpy(y,y_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
+      cudaMemcpy(a,a_dev,NB*NT*sizeof(double),cudaMemcpyDeviceToHost);
       output(x,y,vx,vy,a,pot);
       cout<<"t="<< t <<endl;
     }
